@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Simulador Lecho Fluidizado AR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.3.0/aframe.min.js"></script>
+<script src="https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Courier New',monospace;background:#060a14;}
+#splash{position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#060a14 0%,#0d1a2e 50%,#060a14 100%);display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:28px 18px 36px;gap:14px;}
+.sp-logo{font-size:56px;text-align:center;}
+.sp-titulo{color:#5eead4;font-size:22px;font-weight:bold;letter-spacing:3px;text-align:center;}
+.sp-sub{color:rgba(94,234,212,0.55);font-size:11px;letter-spacing:2.5px;text-align:center;margin-bottom:4px;}
+.sp-divider{width:60px;height:2px;background:linear-gradient(90deg,transparent,#5eead4,transparent);margin:2px auto;}
+.sp-card{background:rgba(94,234,212,0.05);border:1px solid rgba(94,234,212,0.18);border-radius:14px;padding:14px 16px;width:100%;max-width:380px;}
+.sp-card-tit{color:#5eead4;font-size:10px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:6px;}
+.sp-card p{color:rgba(255,255,255,0.68);font-size:12px;line-height:1.75;}
+.sp-card strong{color:#f59e0b;}
+.sp-regs{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sp-reg{border-radius:10px;padding:9px 10px;font-size:10px;font-weight:bold;letter-spacing:0.8px;line-height:1;}
+.sp-reg span{display:block;font-size:9px;font-weight:normal;opacity:0.72;margin-top:4px;letter-spacing:0;}
+.reg-fijo{background:rgba(59,130,246,0.12);color:#93c5fd;border:1px solid rgba(59,130,246,0.35);}
+.reg-min{background:rgba(245,158,11,0.12);color:#fde68a;border:1px solid rgba(245,158,11,0.35);}
+.reg-flu{background:rgba(34,197,94,0.12);color:#86efac;border:1px solid rgba(34,197,94,0.35);}
+.reg-arr{background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.35);}
+.sp-vars{display:flex;flex-direction:column;gap:8px;}
+.sp-var{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.68);font-size:12px;background:rgba(255,255,255,0.03);border-radius:8px;padding:7px 10px;border:1px solid rgba(255,255,255,0.07);}
+.sp-var b{color:#a78bfa;min-width:28px;font-size:13px;}
+.sp-steps{display:flex;flex-direction:column;gap:7px;}
+.sp-step{display:flex;align-items:flex-start;gap:10px;color:rgba(255,255,255,0.65);font-size:12px;}
+.sp-step-n{background:rgba(94,234,212,0.15);color:#5eead4;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;}
+#btn-iniciar{padding:15px 0;border:2px solid #5eead4;background:rgba(94,234,212,0.06);color:#5eead4;font-family:'Courier New',monospace;font-size:14px;font-weight:bold;letter-spacing:2px;border-radius:12px;cursor:pointer;width:100%;max-width:380px;margin-top:4px;}
+#splash-error{color:#ef4444;font-size:12px;display:none;max-width:360px;line-height:1.6;text-align:center;}
+#panel-top{position:fixed;top:0;left:0;width:100%;background:rgba(6,10,20,0.95);border-bottom:2px solid rgba(94,234,212,0.2);padding:8px 12px 10px;z-index:9999;display:none;flex-direction:column;gap:7px;}
+#chip-reg{display:inline-flex;align-items:center;padding:5px 16px;border-radius:24px;font-size:12px;font-weight:bold;letter-spacing:1.5px;width:fit-content;transition:all 0.4s;}
+.r-fijo{background:rgba(59,130,246,0.18);color:#93c5fd;border:1.5px solid #3b82f6;}
+.r-minima{background:rgba(245,158,11,0.18);color:#fde68a;border:1.5px solid #f59e0b;}
+.r-fluidizado{background:rgba(34,197,94,0.18);color:#86efac;border:1.5px solid #22c55e;}
+.r-arrastre{background:rgba(239,68,68,0.18);color:#fca5a5;border:1.5px solid #ef4444;}
+#grid-res{display:grid;grid-template-columns:repeat(3,1fr);gap:5px 10px;}
+.ri{display:flex;flex-direction:column;gap:1px;}
+.rl{color:rgba(94,234,212,0.55);font-size:9px;letter-spacing:0.5px;text-transform:uppercase;}
+.rv{color:#f1f5f9;font-size:13px;font-weight:bold;}
+#mano-wrap{position:fixed;right:8px;top:50%;transform:translateY(-50%);z-index:9999;display:none;flex-direction:column;align-items:center;gap:3px;}
+.ml{color:rgba(94,234,212,0.75);font-size:9px;}
+#mano-val{color:#fff;font-size:10px;font-weight:bold;text-align:center;min-width:44px;}
+#mano-track{width:22px;height:155px;background:rgba(255,255,255,0.05);border:1.5px solid rgba(94,234,212,0.22);border-radius:11px;position:relative;overflow:hidden;}
+#mano-fill{position:absolute;bottom:0;left:0;width:100%;height:0%;border-radius:11px;transition:height 0.3s,background 0.4s;}
+#mano-linea{position:absolute;left:-4px;width:calc(100% + 8px);height:2px;background:rgba(245,158,11,0.9);z-index:2;}
+#mano-tag{color:rgba(245,158,11,0.8);font-size:9px;}
+#badge-pausa{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(6,10,20,0.92);border:1.5px solid rgba(94,234,212,0.5);color:#5eead4;font-size:13px;letter-spacing:2px;padding:8px 22px;border-radius:24px;z-index:9999;pointer-events:none;}
+#panel-bot{position:fixed;bottom:0;left:0;width:calc(100% - 46px);background:rgba(6,10,20,0.95);border-top:2px solid rgba(94,234,212,0.2);padding:11px 13px 15px;z-index:9999;display:none;flex-direction:column;gap:11px;}
+.srow{display:flex;align-items:center;gap:8px;}
+.slbl{color:rgba(94,234,212,0.82);font-size:10px;min-width:110px;line-height:1.3;}
+.srow input[type=range]{flex:1;height:5px;cursor:pointer;border-radius:3px;outline:none;-webkit-appearance:none;}
+#sU{accent-color:#22c55e;}#sdp{accent-color:#5eead4;}#sEps{accent-color:#a78bfa;}
+.sv{font-size:12px;font-weight:bold;min-width:56px;text-align:right;}
+#vU{color:#22c55e;}#vdp{color:#5eead4;}#vEps{color:#a78bfa;}
+.eps-row{display:flex;gap:7px;align-items:center;padding:0 2px;}
+.eps-lbl{font-size:10px;color:rgba(94,234,212,0.65);}
+#btn-eps{padding:4px 11px;border:1.5px solid rgba(94,234,212,0.5);background:transparent;color:#5eead4;font-family:'Courier New',monospace;font-size:10px;border-radius:6px;cursor:pointer;}
+#eps-desc{font-size:9px;color:rgba(255,255,255,0.4);}
+#btn-pausa{align-self:center;padding:9px 36px;border:2px solid #5eead4;background:transparent;color:#5eead4;font-family:'Courier New',monospace;font-size:13px;font-weight:bold;letter-spacing:2px;border-radius:8px;cursor:pointer;transition:all 0.2s;}
+#btn-pausa.pausado{background:#5eead4;color:#060a14;}
+</style>
+</head>
+<body>
+<div id="splash">
+  <div class="sp-logo">&#9879;&#65039;</div>
+  <div class="sp-titulo">LECHO FLUIDIZADO</div>
+  <div class="sp-sub">SIMULADOR DE REALIDAD AUMENTADA</div>
+  <div class="sp-divider"></div>
+  <div class="sp-card">
+    <div class="sp-card-tit">&#128300; Que es un lecho fluidizado?</div>
+    <p>Sistema en el que particulas solidas son <strong>suspendidas</strong> por un fluido ascendente. Al superar la <strong>velocidad minima de fluidizacion (Umf)</strong>, las particulas se separan y el lecho se comporta como un fluido.</p>
+  </div>
+  <div class="sp-card">
+    <div class="sp-card-tit">&#128202; Regimenes de operacion</div>
+    <div class="sp-regs">
+      <div class="sp-reg reg-fijo">LECHO FIJO<span>U menor Umf - Particulas inmoviles</span></div>
+      <div class="sp-reg reg-min">FLUIDIZ. MINIMA<span>U aprox Umf - Burbujeo incipiente</span></div>
+      <div class="sp-reg reg-flu">LECHO FLUIDIZADO<span>U mayor Umf - Lecho se expande</span></div>
+      <div class="sp-reg reg-arr">ARRASTRE<span>U mayor Ut - Particulas salen</span></div>
+    </div>
+  </div>
+  <div class="sp-card">
+    <div class="sp-card-tit">&#9881;&#65039; Sistema simulado</div>
+    <p><strong>Solido:</strong> Arena SiO2 - rho_p=2650 kg/m3 - phi_s=0.86 - Geldart B<br>
+    <strong>Fluido:</strong> Aire 25C - rho_f=1.184 kg/m3 - mu=1.849e-5 Pa.s<br>
+    <strong>Modelos:</strong> Kunii y Levenspiel (1991) - Richardson y Zaki (1954)</p>
+  </div>
+  <div class="sp-card">
+    <div class="sp-card-tit">&#127908; Variables interactivas</div>
+    <div class="sp-vars">
+      <div class="sp-var"><b>U</b> Velocidad superficial del fluido (m/s)</div>
+      <div class="sp-var"><b>dp</b> Diametro de particula (um)</div>
+      <div class="sp-var"><b>eps</b> Porosidad del lecho (adimensional)</div>
+    </div>
+  </div>
+  <div class="sp-card" style="border-color:rgba(94,234,212,0.35);">
+    <div class="sp-card-tit">&#128241; Como usar</div>
+    <div class="sp-steps">
+      <div class="sp-step"><div class="sp-step-n">1</div><span>Pega el <strong style="color:#5eead4">marcador Hiro</strong> en una pared vertical</span></div>
+      <div class="sp-step"><div class="sp-step-n">2</div><span>Presiona <strong style="color:#5eead4">Activar Camara</strong> y apunta al marcador</span></div>
+      <div class="sp-step"><div class="sp-step-n">3</div><span>El reactor aparece - mueve los sliders para cambiar condiciones</span></div>
+      <div class="sp-step"><div class="sp-step-n">4</div><span>Usa <strong style="color:#5eead4">PAUSA</strong> para congelar y analizar el panel</span></div>
+    </div>
+  </div>
+  <button id="btn-iniciar">ACTIVAR CAMARA</button>
+  <div id="splash-error"></div>
+</div>
+<div id="panel-top">
+  <div id="chip-reg" class="r-fijo">LECHO FIJO</div>
+  <div id="grid-res">
+    <div class="ri"><span class="rl">Umf (m/s)</span><span class="rv" id="rUmf">-</span></div>
+    <div class="ri"><span class="rl">Ut (m/s)</span><span class="rv" id="rUt">-</span></div>
+    <div class="ri"><span class="rl">U/Umf</span><span class="rv" id="rRatio">-</span></div>
+    <div class="ri"><span class="rl">dP (Pa)</span><span class="rv" id="rDP">-</span></div>
+    <div class="ri"><span class="rl">dPmf (Pa)</span><span class="rv" id="rDPmf">-</span></div>
+    <div class="ri"><span class="rl">eps actual</span><span class="rv" id="rEps">-</span></div>
+    <div class="ri"><span class="rl">h lecho (m)</span><span class="rv" id="rH">-</span></div>
+    <div class="ri"><span class="rl">Ar</span><span class="rv" id="rAr">-</span></div>
+    <div class="ri"><span class="rl">Remf</span><span class="rv" id="rRemf">-</span></div>
+  </div>
+</div>
+<div id="mano-wrap">
+  <span class="ml">dP</span>
+  <div id="mano-val">- Pa</div>
+  <div id="mano-track">
+    <div id="mano-fill"></div>
+    <div id="mano-linea" style="bottom:50%"></div>
+  </div>
+  <span id="mano-tag">dPmf</span>
+</div>
+<div id="badge-pausa">PAUSADO</div>
+<a-scene arjs="sourceType: webcam; detectionMode: mono; debugUIEnabled: false;" vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true;">
+  <a-marker preset="hiro" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+    <a-entity rotation="90 0 0" position="0 0 0">
+      <a-cylinder position="0 0.01 0" radius="0.30" height="0.020" color="#5eead4" opacity="0.60"></a-cylinder>
+      <a-cylinder position="0 0.88 0" radius="0.30" height="0.020" color="#5eead4" opacity="0.60"></a-cylinder>
+      <a-cylinder position="0 0.44 0" radius="0.30" height="0.88" color="#5eead4" opacity="0.12" open-ended="true" side="double" segments-radial="24"></a-cylinder>
+      <a-cylinder id="linea-lecho" position="0 0.33 0" radius="0.28" height="0.006" color="#f59e0b" opacity="0.95"></a-cylinder>
+      <a-entity id="cpart"></a-entity>
+    </a-entity>
+  </a-marker>
+  <a-entity camera></a-entity>
+</a-scene>
+<div id="panel-bot">
+  <div class="srow">
+    <span class="slbl">U - vel. fluido (m/s)</span>
+    <input type="range" id="sU" min="0" max="0.60" step="0.005" value="0.05"/>
+    <span class="sv" id="vU">0.050 m/s</span>
+  </div>
+  <div class="srow">
+    <span class="slbl">dp - diam. particula (um)</span>
+    <input type="range" id="sdp" min="100" max="800" step="10" value="500"/>
+    <span class="sv" id="vdp">500 um</span>
+  </div>
+  <div class="srow">
+    <span class="slbl">eps - porosidad lecho</span>
+    <input type="range" id="sEps" min="0.35" max="0.95" step="0.01" value="0.42"/>
+    <span class="sv" id="vEps">0.420</span>
+  </div>
+  <div class="eps-row">
+    <span class="eps-lbl">Modo eps:</span>
+    <button id="btn-eps">CALCULADO</button>
+    <span id="eps-desc">eps se calcula automaticamente</span>
+  </div>
+  <button id="btn-pausa">PAUSA</button>
+</div>
+<script>
+var P={rho_p:2650,rho_f:1.184,mu:1.849e-5,phi_s:0.86,g:9.81};
+var H0=0.30;
+var E={pausado:false,U:0.05,dp:500e-6,eps_manual:false,eps_slider:0.42,Ar:0,emf:0,eps0:0.40,Remf:0,Umf:0,Ret:0,Ut:0,n_rz:0,regimen:'fijo',deltaP:0,deltaP_mf:0,eps:0,h:0};
+
+function fisica(){
+  var rho_p=P.rho_p,rho_f=P.rho_f,mu=P.mu,phi_s=P.phi_s,g=P.g;
+  var U=E.U,dp=E.dp;
+  var Ar=Math.pow(dp,3)*rho_f*(rho_p-rho_f)*g/(mu*mu);
+  var mm=dp*1000;
+  var emf=mm<=0.05?0.56:mm<=0.07?0.56+(mm-0.05)/0.02*(0.52-0.56):mm<=0.10?0.52+(mm-0.07)/0.03*(0.48-0.52):mm<=0.20?0.48+(mm-0.10)/0.10*(0.44-0.48):mm<=0.30?0.44+(mm-0.20)/0.10*(0.42-0.44):0.42;
+  var eps0=0.40;
+  var Remf=Math.sqrt(33.7*33.7+0.0408*Ar)-33.7;
+  var Umf=Remf*mu/(rho_f*dp);
+  var K=Math.pow(Ar,1/3);
+  var Ut,Ret=0;
+  if(K<2.6){Ut=g*dp*dp*(rho_p-rho_f)/(18*mu);}
+  else if(K>68.9){Ut=1.75*Math.sqrt(g*dp*(rho_p-rho_f)/rho_f);}
+  else{
+    var ui=Math.sqrt(4*g*dp*(rho_p-rho_f)/(3*rho_f));
+    for(var k=0;k<80;k++){var Re=rho_f*ui*dp/mu;var CD=Re<1?24/Re:18.5/Math.pow(Re,0.6);var un=Math.sqrt(4*g*dp*(rho_p-rho_f)/(3*rho_f*CD));if(Math.abs(un-ui)/ui<1e-8)break;ui=un;}
+    Ut=ui;
+  }
+  Ret=rho_f*Ut*dp/mu;
+  var TOL=0.004;
+  var reg=U<Umf-TOL?'fijo':U<=Umf+TOL?'minima':U<Ut?'fluidizado':'arrastre';
+  var dPmf=H0*(1-emf)*(rho_p-rho_f)*g;
+  var dP,eps,h,n_rz=0;
+  if(E.eps_manual){
+    eps=Math.max(E.eps_slider,emf);h=H0*(1-eps0)/(1-eps);
+    var Uc=Math.max(U,1e-6);
+    dP=h*(150*mu*Uc*(1-eps)*(1-eps)/(phi_s*phi_s*dp*dp*Math.pow(eps,3))+1.75*rho_f*Uc*Uc*(1-eps)/(phi_s*dp*Math.pow(eps,3)));
+  }else{
+    if(reg==='fijo'){var Uc=Math.max(U,1e-6);dP=H0*(150*mu*Uc*(1-eps0)*(1-eps0)/(phi_s*phi_s*dp*dp*Math.pow(eps0,3))+1.75*rho_f*Uc*Uc*(1-eps0)/(phi_s*dp*Math.pow(eps0,3)));eps=eps0;h=H0;}
+    else if(reg==='minima'){dP=dPmf;eps=emf;h=H0*(1-eps0)/(1-emf);}
+    else if(reg==='fluidizado'){dP=dPmf;n_rz=Ret<0.2?4.65:Ret<1?4.35*Math.pow(Ret,-0.03):Ret<500?4.45*Math.pow(Ret,-0.1):2.39;eps=Math.max(Math.pow(Math.min(U/Ut,0.9995),1/n_rz),emf);h=H0*(1-eps0)/(1-eps);}
+    else{dP=dPmf*0.55;eps=0.96;h=H0*(1-eps0)/(1-eps);}
+    document.getElementById('sEps').value=eps.toFixed(2);
+    document.getElementById('vEps').textContent=eps.toFixed(3);
+  }
+  E.Ar=Ar;E.emf=emf;E.eps0=eps0;E.Remf=Remf;E.Umf=Umf;E.Ret=Ret;E.Ut=Ut;E.n_rz=n_rz;E.regimen=reg;E.deltaP=dP;E.deltaP_mf=dPmf;E.eps=eps;E.h=h;
+}
+
+var N=80,parts=[];
+var cpart=document.getElementById('cpart');
+var YB=0.03,YT=0.86,RM=0.22;
+var CAPAS=[-0.15,-0.08,0.00,0.08,0.15];
+for(var i=0;i<N;i++){
+  var ci=i%8,ri=Math.floor(i/8);
+  var x0=-0.21+ci*(0.42/7);
+  var y0=YB+ri*0.038;
+  var cIdx=i%CAPAS.length;
+  var z0=CAPAS[cIdx]+(Math.random()-0.5)*0.025;
+  var s=document.createElement('a-sphere');
+  s.setAttribute('radius','0.036');
+  s.setAttribute('position',x0.toFixed(4)+' '+y0.toFixed(4)+' '+z0.toFixed(4));
+  s.setAttribute('color','#60a5fa');
+  s.setAttribute('opacity','1.0');
+  s.setAttribute('roughness','0.05');
+  s.setAttribute('metalness','0.3');
+  cpart.appendChild(s);
+  parts.push({el:s,x0:x0,y:y0,z0:z0,zCapa:CAPAS[cIdx],fase:Math.random()*Math.PI*2});
+}
+
+var COLS={fijo:'#60a5fa',minima:'#f59e0b',fluidizado:'#22c55e',arrastre:'#ef4444'};
+var CHIPS={fijo:{txt:'LECHO FIJO',cls:'r-fijo'},minima:{txt:'FLUIDIZACION MINIMA',cls:'r-minima'},fluidizado:{txt:'LECHO FLUIDIZADO',cls:'r-fluidizado'},arrastre:{txt:'REGIMEN DE ARRASTRE',cls:'r-arrastre'}};
+
+function panelUpdate(){
+  var Umf=E.Umf,Ut=E.Ut,U=E.U,deltaP=E.deltaP,deltaP_mf=E.deltaP_mf,eps=E.eps,h=E.h,Ar=E.Ar,Remf=E.Remf,regimen=E.regimen;
+  document.getElementById('rUmf').textContent=Umf.toFixed(4);
+  document.getElementById('rUt').textContent=Ut.toFixed(4);
+  document.getElementById('rRatio').textContent=Umf>0?(U/Umf).toFixed(2):'-';
+  document.getElementById('rDP').textContent=deltaP.toFixed(1);
+  document.getElementById('rDPmf').textContent=deltaP_mf.toFixed(1);
+  document.getElementById('rEps').textContent=eps.toFixed(4);
+  document.getElementById('rH').textContent=h.toFixed(3);
+  document.getElementById('rAr').textContent=Ar.toFixed(0);
+  document.getElementById('rRemf').textContent=Remf.toFixed(4);
+  var c=CHIPS[regimen];
+  var chip=document.getElementById('chip-reg');
+  chip.textContent=c.txt;chip.className=c.cls;
+  var mx=Math.max(deltaP_mf*1.5,1);
+  document.getElementById('mano-fill').style.height=Math.min(deltaP/mx*100,100)+'%';
+  document.getElementById('mano-fill').style.background=COLS[regimen];
+  document.getElementById('mano-val').textContent=deltaP.toFixed(0)+' Pa';
+  document.getElementById('mano-linea').style.bottom=Math.min(deltaP_mf/mx*100,100)+'%';
+}
+
+var lineaLecho=document.getElementById('linea-lecho');
+var t=0,loopId=null;
+
+function arUpdate(){
+  var regimen=E.regimen,h=E.h,Umf=E.Umf,Ut=E.Ut,U=E.U,dp=E.dp,eps=E.eps,eps0=E.eps0;
+  var col=COLS[regimen];
+  var hAR=Math.min(h,0.82);
+  var yNivel=YB+hAR;
+  lineaLecho.setAttribute('position','0 '+yNivel.toFixed(4)+' 0');
+  lineaLecho.setAttribute('color',col);
+  var radP=(0.036+(dp*1e6-100)/700*0.015).toFixed(4);
+  var yMax=YB+hAR;
+  for(var i=0;i<parts.length;i++){
+    var p=parts[i];
+    var nx=p.x0,ny=p.y,nz=p.z0;
+    if(regimen==='fijo'){
+      var ci=i%8,ri=Math.floor(i/8);
+      nx=-0.21+ci*(0.42/7);ny=YB+ri*0.038;ny=Math.min(ny,yMax-0.02);nz=p.zCapa;
+      ny+=Math.sin(t*0.9+p.fase)*0.002;nx+=Math.sin(t*0.7+p.fase+1)*0.002;
+      p.x0=nx;p.y=ny;p.z0=nz;
+    }else if(regimen==='minima'){
+      if(i<40){
+        var ci2=i%8,ri2=Math.floor(i/8);
+        nx=-0.21+ci2*(0.42/7);ny=YB+ri2*0.038;ny=Math.min(ny,YB+hAR*0.55);nz=p.zCapa;
+        ny+=Math.sin(t*1.5+p.fase)*0.007;
+      }else{
+        ny=p.y+Math.sin(t*3.5+p.fase)*0.016;nx=p.x0+Math.sin(t*2+p.fase)*0.010;
+        ny=Math.max(YB,Math.min(ny,yMax*0.90));nx=Math.max(-RM,Math.min(nx,RM));
+        nz=p.zCapa+Math.sin(t*1.3+p.fase)*0.025;
+      }
+      p.x0=nx;p.y=ny;p.z0=nz;
+    }else if(regimen==='fluidizado'){
+      var expansion=(eps-eps0)/(1-eps0);
+      var ratio=Math.min((U-Umf)/Math.max(Ut-Umf,0.01),1.0);
+      var spd=0.004+ratio*0.013*(1+0.8*expansion);
+      ny=p.y+spd*(1+expansion);
+      nx=p.x0+Math.sin(t*2.2+p.fase)*(0.009+0.030*expansion);
+      nz=p.zCapa+Math.sin(t*1.8+p.fase)*(0.035+0.040*expansion);
+      nx=Math.max(-RM,Math.min(nx,RM));nz=Math.max(-0.18,Math.min(nz,0.18));
+      if(ny>yMax-0.022){p.x0=(Math.random()>0.5?1:-1)*(RM*0.75);ny=YB+Math.random()*0.05;p.zCapa=CAPAS[Math.floor(Math.random()*CAPAS.length)];p.z0=p.zCapa;}
+      else{p.x0=nx;p.z0=nz;}
+      p.y=ny;
+    }else{
+      ny=p.y+0.019+Math.random()*0.009;nx=p.x0+Math.sin(t*1.5+p.fase)*0.007;
+      nz=p.zCapa+Math.sin(t*1.1+p.fase)*0.028;nx=Math.max(-RM,Math.min(nx,RM));
+      if(ny>YT+0.05){ny=YB+Math.random()*0.03;p.x0=(Math.random()-0.5)*RM*1.6;p.zCapa=CAPAS[Math.floor(Math.random()*CAPAS.length)];p.z0=p.zCapa;}
+      else{p.x0=nx;p.z0=nz;}
+      p.y=ny;
+    }
+    p.el.setAttribute('position',nx.toFixed(4)+' '+ny.toFixed(4)+' '+nz.toFixed(4));
+    p.el.setAttribute('color',col);
+    p.el.setAttribute('radius',radP);
+  }
+  t+=0.038;
+}
+
+function onSlider(){
+  E.U=parseFloat(document.getElementById('sU').value);
+  E.dp=parseFloat(document.getElementById('sdp').value)*1e-6;
+  E.eps_slider=parseFloat(document.getElementById('sEps').value);
+  document.getElementById('vU').textContent=E.U.toFixed(3)+' m/s';
+  document.getElementById('vdp').textContent=(E.dp*1e6).toFixed(0)+' um';
+  if(E.eps_manual)document.getElementById('vEps').textContent=E.eps_slider.toFixed(3);
+  fisica();panelUpdate();
+}
+document.getElementById('sU').addEventListener('input',onSlider);
+document.getElementById('sdp').addEventListener('input',onSlider);
+document.getElementById('sEps').addEventListener('input',onSlider);
+
+var btnEps=document.getElementById('btn-eps'),epsDesc=document.getElementById('eps-desc');
+btnEps.addEventListener('click',function(){
+  E.eps_manual=!E.eps_manual;
+  if(E.eps_manual){btnEps.textContent='MANUAL';btnEps.style.color='#f59e0b';btnEps.style.borderColor='rgba(245,158,11,0.6)';epsDesc.textContent='eps fijada manualmente';epsDesc.style.color='rgba(245,158,11,0.7)';}
+  else{btnEps.textContent='CALCULADO';btnEps.style.color='#5eead4';btnEps.style.borderColor='rgba(94,234,212,0.5)';epsDesc.textContent='eps se calcula automaticamente';epsDesc.style.color='rgba(255,255,255,0.4)';}
+  fisica();panelUpdate();
+});
+
+function loop(){fisica();panelUpdate();arUpdate();loopId=requestAnimationFrame(loop);}
+
+var btnP=document.getElementById('btn-pausa'),badge=document.getElementById('badge-pausa');
+btnP.addEventListener('click',function(){
+  E.pausado=!E.pausado;
+  if(E.pausado){cancelAnimationFrame(loopId);loopId=null;btnP.textContent='REANUDAR';btnP.classList.add('pausado');badge.style.display='block';}
+  else{btnP.textContent='PAUSA';btnP.classList.remove('pausado');badge.style.display='none';loop();}
+});
+
+document.getElementById('btn-iniciar').addEventListener('click',function(){
+  var btn=document.getElementById('btn-iniciar'),err=document.getElementById('splash-error');
+  btn.textContent='Solicitando acceso...';btn.disabled=true;
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(s){
+    document.getElementById('splash').style.display='none';
+    document.getElementById('panel-top').style.display='flex';
+    document.getElementById('panel-bot').style.display='flex';
+    document.getElementById('mano-wrap').style.display='flex';
+    onSlider();loop();
+  }).catch(function(e){
+    err.style.display='block';
+    err.textContent=e.name==='NotAllowedError'?'Permiso denegado. Ve a Configuracion y activa la camara.':'Error: '+e.message;
+    btn.textContent='REINTENTAR';btn.disabled=false;
+  });
+});
+</script>
+</body>
+</html>
